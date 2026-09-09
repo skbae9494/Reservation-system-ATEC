@@ -759,7 +759,7 @@ function fmtSignedAtLabel(iso) {
   return isNaN(d) ? iso : fmtSignDate(d);
 }
 
-function renderResRow(r, actionsHtml, showCheckbox) {
+function renderResRow(r, actionsHtml, showCheckbox, isAdminView) {
   const meta = statusMeta(r.status);
   const isPastPending = r.status === "pending" && r.date < todayStr();
   return `
@@ -776,7 +776,7 @@ function renderResRow(r, actionsHtml, showCheckbox) {
           <p class="meta">${escapeHtml(r.eventName)} · 담당 ${escapeHtml(r.manager)} · ${r.attendees}명</p>
           <p class="purpose">${escapeHtml(r.purpose)}</p>
           ${r.status === "rejected" && r.rejectReason ? `<p class="reject-reason">거절 사유: ${escapeHtml(r.rejectReason)}</p>` : ""}
-          ${r.status !== "pending" && r.processedBy ? `<p class="processed-by">처리자: ${escapeHtml(r.processedBy)}</p>` : ""}
+          ${isAdminView && r.status !== "pending" && r.processedBy ? `<p class="processed-by">처리자: ${escapeHtml(r.processedBy)}</p>` : ""}
           ${r.agreed ? `<span class="agree-flag">✓ 사용 주의사항 동의 · ${escapeHtml(r.signedName || r.manager)} · ${escapeHtml(fmtSignedAtLabel(r.signedAt))}${r.agreementVersion ? ` (${escapeHtml(r.agreementVersion)})` : ""}</span>` : ""}
         </div>
         ${actionsHtml ? `<div class="res-actions">${actionsHtml}</div>` : ""}
@@ -1161,6 +1161,7 @@ function renderAdminView() {
                   : r.status === "approved"
                     ? `<button class="btn-reject" data-act="reject" data-id="${r.id}">취소·거절</button>`
                     : `<button class="nav-btn" data-act="reopen" data-id="${r.id}">대기로 되돌리기</button>`,
+                true,
                 true
               )).join("")
           }
