@@ -825,8 +825,9 @@ function renderApplyView() {
             <div style="flex:2"><label class="field"><span>담당자명</span>
               <input class="input" id="f-manager" maxlength="20" placeholder="홍길동" required />
             </label></div>
-            <div style="flex:1"><label class="field"><span>인원 <span id="capHint" class="muted" style="font-weight:400">(최대 ${roomInfo(applyRoom).capacity}명)</span></span>
+            <div style="flex:1"><label class="field"><span>인원</span>
               <input class="input" type="number" min="1" max="${roomInfo(applyRoom).capacity}" id="f-attendees" placeholder="15" required />
+              <span id="capHint" class="muted" style="font-weight:400; margin-top:4px;">(최대 ${roomInfo(applyRoom).capacity}명)</span>
             </label></div>
           </div>
           <label class="field"><span>사용 목적</span>
