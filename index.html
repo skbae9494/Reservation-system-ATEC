@@ -126,6 +126,22 @@
   .cal-dot-approved { background: #3F7A45; }
   .cal-cell.cal-closed { background: #EFE7D6; opacity: 0.65; }
   .cal-closed-label { font-size: 9px; color: #8D8570; }
+  .cal-cell { position: relative; }
+  .cal-tooltip {
+    display: none; position: absolute; top: 100%; left: 50%; margin-top: 6px;
+    transform: translateX(-50%); width: max-content; max-width: min(240px, 80vw);
+    max-height: 200px; overflow-y: auto; text-align: left; white-space: normal;
+    background: #2B2A27; color: #FFFEFA; border-radius: 8px; padding: 8px 10px;
+    font-size: 12px; line-height: 1.5; box-shadow: 0 6px 16px rgba(0,0,0,0.18); z-index: 40;
+  }
+  .cal-cell:hover .cal-tooltip, .cal-cell:focus-visible .cal-tooltip { display: block; }
+  .cal-tip-date { font-weight: 700; margin-bottom: 4px; }
+  .cal-tip-row { display: flex; align-items: baseline; gap: 5px; margin-top: 3px; }
+  .cal-tip-row + .cal-tip-row { padding-top: 3px; border-top: 1px solid rgba(255,255,255,0.12); }
+  .cal-tip-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .cal-tip-time { font-family: ui-monospace,'SF Mono',Menlo,monospace; flex-shrink: 0; color: #D8D2C2; }
+  .cal-tip-room { flex-shrink: 0; color: #C3D6B8; }
+  .cal-tip-name { min-width: 0; word-break: keep-all; overflow-wrap: break-word; }
   .closed-day-note {
     margin: 0 0 10px; padding: 8px 12px; background: #F6E3D8; border: 1px solid #B25C3E;
     color: #7A3D24; border-radius: 6px; font-size: 12.5px; font-weight: 500;
@@ -550,7 +566,7 @@ let adminDate = todayStr();
 let adminFilter = "all";
 let applyRoom = DEFAULT_ROOM_ID;   // 신청폼에서 선택 중인 교육장
 let adminRoomFilter = "all";       // 담당자 목록의 교육장 필터
-let applyCalMode = "day";   // "day" | "month"
+let applyCalMode = "month";   // "day" | "month" — 신청자 화면 첫 진입 시 월간 보기로 시작
 let adminCalMode = "day";   // "day" | "month"
 let managerSearchQuery = "";
 
@@ -675,6 +691,22 @@ function dayStats(date) {
   };
 }
 
+function dayTooltipHtml(date) {
+  const list = activeDayReservations(date).sort((a, b) => toMin(a.startTime) - toMin(b.startTime));
+  if (list.length === 0) return "";
+  const rows = list.map((r) => {
+    const meta = statusMeta(r.status);
+    return `
+      <div class="cal-tip-row">
+        <span class="cal-tip-dot" style="background:${meta.border}"></span>
+        <span class="cal-tip-time">${r.startTime}~${r.endTime}</span>
+        <span class="cal-tip-room">${escapeHtml(roomNameOf(r))}</span>
+        <span class="cal-tip-name">${escapeHtml(r.eventName)}</span>
+      </div>`;
+  }).join("");
+  return `<div class="cal-tooltip"><div class="cal-tip-date">${fmtDateLabel(date)}</div>${rows}</div>`;
+}
+
 function monthCells(dateStr) {
   const d = new Date(dateStr + "T00:00:00");
   const year = d.getFullYear(), month = d.getMonth();
@@ -715,6 +747,7 @@ function renderMonthCalendar(calId, dateStr) {
                  ${stats.pending > 0 ? `<span class="cal-dot cal-dot-pending" title="승인 대기 ${stats.pending}건"></span>` : ""}
                  ${stats.approved > 0 ? `<span class="cal-dot cal-dot-approved" title="승인 ${stats.approved}건"></span>` : ""}
                </span>`}
+          ${dayTooltipHtml(c)}
         </button>`;
     }).join("");
     weeksHtml += `<div class="cal-week">${weekCells}</div>`;
