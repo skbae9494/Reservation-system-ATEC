@@ -129,18 +129,23 @@
   .cal-cell { position: relative; }
   .cal-tooltip {
     display: none; position: absolute; top: 100%; left: 50%; margin-top: 6px;
-    transform: translateX(-50%); width: max-content; max-width: min(240px, 80vw);
-    max-height: 200px; overflow-y: auto; text-align: left; white-space: normal;
-    background: #2B2A27; color: #FFFEFA; border-radius: 8px; padding: 8px 10px;
+    transform: translateX(-50%); width: max-content; max-width: min(280px, 85vw);
+    max-height: 220px; overflow-y: auto; text-align: left; white-space: normal;
+    background: #2B2A27; color: #FFFEFA; border-radius: 8px; padding: 10px 12px;
     font-size: 12px; line-height: 1.5; box-shadow: 0 6px 16px rgba(0,0,0,0.18); z-index: 40;
   }
   .cal-cell:hover .cal-tooltip, .cal-cell:focus-visible .cal-tooltip { display: block; }
-  .cal-tip-date { font-weight: 700; margin-bottom: 4px; }
-  .cal-tip-row { display: flex; align-items: baseline; gap: 5px; margin-top: 3px; }
-  .cal-tip-row + .cal-tip-row { padding-top: 3px; border-top: 1px solid rgba(255,255,255,0.12); }
-  .cal-tip-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-  .cal-tip-time { font-family: ui-monospace,'SF Mono',Menlo,monospace; flex-shrink: 0; color: #D8D2C2; }
-  .cal-tip-room { flex-shrink: 0; color: #C3D6B8; }
+  .cal-tip-date {
+    font-weight: 700; margin-bottom: 6px; padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255,255,255,0.16);
+  }
+  .cal-tip-grid {
+    display: grid; grid-template-columns: auto auto auto 1fr;
+    column-gap: 8px; row-gap: 6px; align-items: baseline;
+  }
+  .cal-tip-dot { width: 6px; height: 6px; border-radius: 50%; align-self: center; }
+  .cal-tip-time { font-family: ui-monospace,'SF Mono',Menlo,monospace; white-space: nowrap; color: #D8D2C2; }
+  .cal-tip-room { white-space: nowrap; color: #C3D6B8; }
   .cal-tip-name { min-width: 0; word-break: keep-all; overflow-wrap: break-word; }
   .closed-day-note {
     margin: 0 0 10px; padding: 8px 12px; background: #F6E3D8; border: 1px solid #B25C3E;
@@ -709,14 +714,12 @@ function dayTooltipHtml(date) {
   const rows = list.map((r) => {
     const meta = statusMeta(r.status);
     return `
-      <div class="cal-tip-row">
         <span class="cal-tip-dot" style="background:${meta.border}"></span>
         <span class="cal-tip-time">${r.startTime}~${r.endTime}</span>
         <span class="cal-tip-room">${escapeHtml(roomNameOf(r))}</span>
-        <span class="cal-tip-name">${escapeHtml(r.eventName)}</span>
-      </div>`;
+        <span class="cal-tip-name">${escapeHtml(r.eventName)}</span>`;
   }).join("");
-  return `<div class="cal-tooltip"><div class="cal-tip-date">${fmtDateLabel(date)}</div>${rows}</div>`;
+  return `<div class="cal-tooltip"><div class="cal-tip-date">${fmtDateLabel(date)}</div><div class="cal-tip-grid">${rows}</div></div>`;
 }
 
 function monthCells(dateStr) {
