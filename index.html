@@ -110,22 +110,30 @@
   .cal-weekday-row span { text-align: center; font-size: 11.5px; color: #8D8570; font-weight: 500; }
   .cal-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 4px; }
   .cal-cell {
-    aspect-ratio: 1; border: 1px solid #E3DAC5; border-radius: 8px; background: #FFFEFA;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-    cursor: pointer; padding: 2px; font-family: inherit;
+    min-height: 46px; border: 1px solid #E3DAC5; border-radius: 8px; background: #FFFEFA;
+    display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 2px;
+    cursor: pointer; padding: 3px 3px 4px; font-family: inherit;
   }
   .cal-cell:hover { border-color: #4C7A52; }
   .cal-empty { border: none; background: transparent; cursor: default; }
-  .cal-daynum { font-size: 12.5px; color: #2B2E22; }
+  .cal-daynum { font-size: 12px; color: #2B2E22; padding: 0 1px; }
   .cal-today { border: 1.5px solid #4C7A52; }
   .cal-today .cal-daynum { color: #2F4A38; font-weight: 700; }
   .cal-selected { background: #E7F0DE; border-color: #4C7A52; }
   .cal-dots { display: flex; gap: 3px; height: 6px; }
-  .cal-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .cal-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
   .cal-dot-pending { background: #C98A2C; }
   .cal-dot-approved { background: #3F7A45; }
   .cal-cell.cal-closed { background: #EFE7D6; opacity: 0.65; }
   .cal-closed-label { font-size: 9px; color: #8D8570; }
+  .cal-cell-items { display: flex; flex-direction: column; gap: 2px; width: 100%; }
+  .cal-cell-item {
+    display: flex; flex-direction: column; width: 100%; text-align: left;
+    border-left: 2px solid; border-radius: 3px; padding: 1px 4px; font-size: 8.5px; line-height: 1.3;
+  }
+  .cal-cell-item-room { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cal-cell-item-time { font-family: ui-monospace,'SF Mono',Menlo,monospace; opacity: 0.85; white-space: nowrap; }
+  .cal-cell-more { font-size: 8.5px; color: #8D8570; padding: 0 4px; }
   .cal-cell { position: relative; }
   .cal-tooltip {
     display: none; position: absolute; top: 100%; left: 50%; margin-top: 6px;
@@ -139,14 +147,17 @@
     font-weight: 700; margin-bottom: 6px; padding-bottom: 6px;
     border-bottom: 1px solid rgba(255,255,255,0.16);
   }
-  .cal-tip-grid {
-    display: grid; grid-template-columns: auto auto auto 1fr;
-    column-gap: 8px; row-gap: 6px; align-items: baseline;
+  .cal-tip-item + .cal-tip-item {
+    margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.12);
   }
-  .cal-tip-dot { width: 6px; height: 6px; border-radius: 50%; align-self: center; }
+  .cal-tip-line1 { display: flex; align-items: center; gap: 6px; }
+  .cal-tip-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
   .cal-tip-time { font-family: ui-monospace,'SF Mono',Menlo,monospace; white-space: nowrap; color: #D8D2C2; }
   .cal-tip-room { white-space: nowrap; color: #C3D6B8; }
-  .cal-tip-name { min-width: 0; word-break: keep-all; overflow-wrap: break-word; }
+  .cal-tip-name {
+    margin-top: 3px; padding-left: 12px; color: #FFFEFA;
+    word-break: keep-all; overflow-wrap: break-word;
+  }
   .closed-day-note {
     margin: 0 0 10px; padding: 8px 12px; background: #F6E3D8; border: 1px solid #B25C3E;
     color: #7A3D24; border-radius: 6px; font-size: 12.5px; font-weight: 500;
@@ -700,12 +711,26 @@ function renderLedger(date, compact) {
 }
 
 /* ---------- 월간 캘린더 뷰 ---------- */
-function dayStats(date) {
-  const list = reservations.filter((r) => r.date === date && r.status !== "rejected");
-  return {
-    pending: list.filter((r) => r.status === "pending").length,
-    approved: list.filter((r) => r.status === "approved").length,
-  };
+function shortRoomName(name) {
+  return name.replace(/^ATEC\s*/, "");
+}
+
+function dayCellItemsHtml(date) {
+  const list = activeDayReservations(date).sort((a, b) => toMin(a.startTime) - toMin(b.startTime));
+  if (list.length === 0) return "";
+  const MAX_SHOWN = 3;
+  const shown = list.slice(0, MAX_SHOWN);
+  const itemsHtml = shown.map((r) => {
+    const meta = statusMeta(r.status);
+    return `
+      <span class="cal-cell-item" style="background:${meta.bg};border-left-color:${meta.border};color:${meta.text}">
+        <span class="cal-cell-item-room">${escapeHtml(shortRoomName(roomNameOf(r)))}</span>
+        <span class="cal-cell-item-time">${r.startTime}~${r.endTime}</span>
+      </span>`;
+  }).join("");
+  const moreHtml = list.length > MAX_SHOWN
+    ? `<span class="cal-cell-more">+${list.length - MAX_SHOWN}건</span>` : "";
+  return `<span class="cal-cell-items">${itemsHtml}${moreHtml}</span>`;
 }
 
 function dayTooltipHtml(date) {
@@ -714,12 +739,16 @@ function dayTooltipHtml(date) {
   const rows = list.map((r) => {
     const meta = statusMeta(r.status);
     return `
-        <span class="cal-tip-dot" style="background:${meta.border}"></span>
-        <span class="cal-tip-time">${r.startTime}~${r.endTime}</span>
-        <span class="cal-tip-room">${escapeHtml(roomNameOf(r))}</span>
-        <span class="cal-tip-name">${escapeHtml(r.eventName)}</span>`;
+      <div class="cal-tip-item">
+        <div class="cal-tip-line1">
+          <span class="cal-tip-dot" style="background:${meta.border}"></span>
+          <span class="cal-tip-time">${r.startTime}~${r.endTime}</span>
+          <span class="cal-tip-room">${escapeHtml(roomNameOf(r))}</span>
+        </div>
+        <div class="cal-tip-name">${escapeHtml(r.eventName)}</div>
+      </div>`;
   }).join("");
-  return `<div class="cal-tooltip"><div class="cal-tip-date">${fmtDateLabel(date)}</div><div class="cal-tip-grid">${rows}</div></div>`;
+  return `<div class="cal-tooltip"><div class="cal-tip-date">${fmtDateLabel(date)}</div>${rows}</div>`;
 }
 
 function monthCells(dateStr) {
@@ -747,7 +776,6 @@ function renderMonthCalendar(calId, dateStr) {
   for (let w = 0; w < cells.length / 7; w++) {
     const weekCells = cells.slice(w * 7, w * 7 + 7).map((c) => {
       if (!c) return `<div class="cal-cell cal-empty"></div>`;
-      const stats = dayStats(c);
       const dayNum = Number(c.slice(-2));
       const cls = ["cal-cell"];
       if (c === todayS) cls.push("cal-today");
@@ -758,10 +786,7 @@ function renderMonthCalendar(calId, dateStr) {
           <span class="cal-daynum">${dayNum}</span>
           ${isClosedDay(c)
             ? `<span class="cal-closed-label">휴관</span>`
-            : `<span class="cal-dots">
-                 ${stats.pending > 0 ? `<span class="cal-dot cal-dot-pending" title="승인 대기 ${stats.pending}건"></span>` : ""}
-                 ${stats.approved > 0 ? `<span class="cal-dot cal-dot-approved" title="승인 ${stats.approved}건"></span>` : ""}
-               </span>`}
+            : dayCellItemsHtml(c)}
           ${dayTooltipHtml(c)}
         </button>`;
     }).join("");
